@@ -4,9 +4,12 @@
 FROM node:20-alpine AS builder
 
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci --omit=dev=false
 
+# install only production deps ― lock‑file mismatch tolerated
+COPY package*.json ./
+RUN npm install --omit=dev --no-audit --no-fund
+
+# copy source and build
 COPY . .
 RUN npm run build   # → dist/
 
