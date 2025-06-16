@@ -8,30 +8,24 @@ env:
 phases:
   pre_build:
     commands:
-      # Docker Hub login
-      - echo "Login to DockerHub..."
-      - echo ${DOCKERHUB_TOKEN} | docker login -u ${DOCKERHUB_USER} --password-stdin
-      # ECR Login
-      - echo "Login to ECR..."
+      - echo "Logging in to ECR..."
       - ECR_MAIN_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-      - aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_MAIN_URI}
+      - aws ecr get-login-password --region "${AWS_REGION}" | docker login --username AWS --password-stdin "${ECR_MAIN_URI}"
       - ECR_IMAGE_URI="${ECR_MAIN_URI}/${ECR_REPO_NAME}:latest"
-      - echo "ECR Image URI ${ECR_IMAGE_URI}"
+      - echo "ECR_IMAGE_URI=${ECR_IMAGE_URI}"
+
   build:
     commands:
-      - docker build -t tictactoev2:latest .
+      - echo "Building image (BuildKit + --load)..."
+      - export DOCKER_BUILDKIT=1
+      - docker build --load -t "${ECR_IMAGE_URI}" .
+
   post_build:
     commands:
-      # For Docker Hub 
-      - docker tag tictactoev2:latest ${DOCKERHUB_USER}/tictactoev2:latest
-      - echo "Pushing the Docker image to DockerHub..."
-      - docker push ${DOCKERHUB_USER}/tictactoev2:latest
-      # For ECR
-      - echo "Pushing the Docker image to ECR..."
-      - docker tag tictactoev2:latest ${ECR_IMAGE_URI}
-      - docker push ${ECR_IMAGE_URI}
-      # Generate image definitions file for ECS
-      - printf '[{"name":"ttt-game","imageUri":"%s"}]' ${ECR_IMAGE_URI} > imagedefinitions.json
+      - echo "Pushing image to ECR..."
+      - docker push "${ECR_IMAGE_URI}"
+      - echo "Writing imagedefinitions.json..."
+      - printf '[{"name":"ttt-game","imageUri":"%s"}]' "${ECR_IMAGE_URI}" > imagedefinitions.json
 
 artifacts:
   files:
