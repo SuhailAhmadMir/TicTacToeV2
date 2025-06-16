@@ -1,0 +1,37 @@
+version: 0.2
+env:
+  variables:
+    ECR_REPO_NAME: tic-tac-toe-game
+  secrets-manager:
+    DOCKERHUB_TOKEN: sam-dockerhub:token
+    DOCKERHUB_USER: sam-dockerhub:user
+phases:
+  pre_build:
+    commands:
+      # Docker Hub login
+      - echo "Login to DockerHub..."
+      - echo ${DOCKERHUB_TOKEN} | docker login -u ${DOCKERHUB_USER} --password-stdin
+      # ECR Login
+      - echo "Login to ECR..."
+      - ECR_MAIN_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+      - aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_MAIN_URI}
+      - ECR_IMAGE_URI="${ECR_MAIN_URI}/${ECR_REPO_NAME}:latest"
+      - echo "ECR Image URI ${ECR_IMAGE_URI}"
+  build:
+    commands:
+      - docker build -t tic-tac-toe-game:latest .
+  post_build:
+    commands:
+      # For Docker Hub 
+      # - docker tag tic-tac-toe-game:latest ${DOCKERHUB_USER}/tic-tac-toe-game:latest
+      # - docker push ${DOCKERHUB_USER}/tic-tac-toe-game:latest
+      # For ECR
+      - echo "Pushing the Docker image to ECR..."
+      - docker tag tic-tac-toe-game:latest ${ECR_IMAGE_URI}
+      - docker push ${ECR_IMAGE_URI}
+      # Generate image definitions file for ECS
+      - printf '[{"name":"ttt-game","imageUri":"%s"}]' ${ECR_IMAGE_URI} > imagedefinitions.json
+
+artifacts:
+  files:
+    - imagedefinitions.json
