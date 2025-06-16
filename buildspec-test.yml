@@ -1,0 +1,26 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 20
+    commands:
+      - echo "Installing test dependencies..."
+      - npm ci
+
+  build:
+    commands:
+      - echo "Running unit tests..."
+      - npm run test
+
+reports:
+  unit-tests:
+    files:
+      - junit.xml
+    file-format: JUNITXML
+
+artifacts:
+  files:
+    - junit.xml
+    - coverage/**
+  discard-paths: no
