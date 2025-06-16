@@ -2,10 +2,8 @@ version: 0.2
 
 env:
   variables:
-    ECR_REPO_NAME: tictactoev2
-  secrets-manager:
-    DOCKERHUB_TOKEN: sam-dockerhub:token
-    DOCKERHUB_USER: sam-dockerhub:user
+    ECR_MAIN_URI: "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+    ECR_IMAGE_URI: "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}:latest"
 
 phases:
   pre_build:
@@ -14,23 +12,19 @@ phases:
       - echo ${DOCKERHUB_TOKEN} | docker login -u ${DOCKERHUB_USER} --password-stdin
 
       - echo "Login to ECR..."
-      - ECR_MAIN_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
       - aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_MAIN_URI}
-      - ECR_IMAGE_URI="${ECR_MAIN_URI}/${ECR_REPO_NAME}:latest"
+
       - echo "ECR Image URI ${ECR_IMAGE_URI}"
 
   build:
     commands:
-      - echo "Building Docker image with ECR tag..."
-      - docker build -t ${ECR_IMAGE_URI} .
+      - echo "Building and pushing Docker image with BuildKit..."
+      - DOCKER_BUILDKIT=1 docker build --push -t ${ECR_IMAGE_URI} .
 
   post_build:
     commands:
-      - echo "Pushing image to ECR..."
-      - docker push ${ECR_IMAGE_URI}
-
-      - echo "Creating imagedefinitions.json for ECS..."
-      - printf '[{"name":"ttt-game","imageUri":"%s"}]' ${ECR_IMAGE_URI} > imagedefinitions.json
+      - echo "Creating imagedefinitions.json..."
+      - echo "[{\"name\":\"tictactoe-container\",\"imageUri\":\"${ECR_IMAGE_URI}\"}]" > imagedefinitions.json
 
 artifacts:
   files:
