@@ -21,20 +21,15 @@ phases:
 
   build:
     commands:
-      - echo "Building Docker image..."
-      - docker build -t ${ECR_REPO_NAME}:latest .
+      - echo "Building Docker image with ECR tag..."
+      - docker build -t ${ECR_IMAGE_URI} .
 
   post_build:
     commands:
-      - echo "Tagging and pushing image to ECR..."
-      - docker tag ${ECR_REPO_NAME}:latest ${ECR_IMAGE_URI}
+      - echo "Pushing image to ECR..."
       - docker push ${ECR_IMAGE_URI}
 
-      # Optionally push to DockerHub (uncomment if needed)
-      # - docker tag ${ECR_REPO_NAME}:latest ${DOCKERHUB_USER}/${ECR_REPO_NAME}:latest
-      # - docker push ${DOCKERHUB_USER}/${ECR_REPO_NAME}:latest
-
-      - echo "Creating imagedefinitions.json..."
+      - echo "Creating imagedefinitions.json for ECS..."
       - printf '[{"name":"ttt-game","imageUri":"%s"}]' ${ECR_IMAGE_URI} > imagedefinitions.json
 
 artifacts:
